@@ -1,0 +1,12 @@
+{
+  "name": "megaprojectbackend",
+  "version": "1.0.0",
+  "description": "backend project - complex",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ishit Godshalwar",
+  "license": "ISC"
+}
