@@ -32,4 +32,19 @@ app.use(express.static("public"));
 app.use(cookieParser());
 // this is used to set cookies or secured cookies in user's browser.
 
+// *****Routes Import**********
+
+import userRouter from "./routes/user.route.js";
+
+// ******Routes Declaration*******
+
+// previously we used to do app.get,app.post,app.put,app.delete
+// app.get("/")
+// but now we are using a router and there's segregation of router,so now we've to use middleware to bring the router
+app.use("/api/v1/users", userRouter);
+// whenever a request comes to /users, the control is passed to userRouter
+// so its like
+// http://localhost:8000/api/v1/users/register
+// now if we wanna add login, there's nothing to be changed here in app.js
+
 export { app };
