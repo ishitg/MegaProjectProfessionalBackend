@@ -17,12 +17,12 @@ const registerUser = asyncHandler(async (req, res) => {
 
   // when data comes from form or json body, we can access it using req.body
   const { fullname, email, username, password } = req.body;
-  console.log("User Registration Data:", {
-    fullname,
-    email,
-    username,
-    password,
-  });
+  // console.log("User Registration Data:", {
+  //   fullname,
+  //   email,
+  //   username,
+  //   password,
+  // });
 
   if (
     [fullname, email, password, username].some((field) => field?.trim() === "")
@@ -30,7 +30,7 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const existingUser = User.findOne({
+  const existingUser = await User.findOne({
     $or: [{ username }, { email }],
   });
 
@@ -38,7 +38,7 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User already exists with this email or username");
   }
 
-  console.log(existingUser);
+  // console.log(existingUser);
 
   // we have added a middleware in user.route.js to handle file uploads
   // so this middleware gives us more options in req.
@@ -50,9 +50,18 @@ const registerUser = asyncHandler(async (req, res) => {
   // and we set maxCount: 1 in multer middleware to limit it to one file
   // so multer has uploaded the file to our local server in the public folder
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  console.log(req.files);
+  // console.log(req.files);
 
-  const coverImageLocalPath = req.files?.CoverImage[0]?.path;
+  // const coverImageLocalPath = req.files?.coverImg[0]?.path;
+
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImg) &&
+    req.files.coverImg.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImg[0].path;
+  }
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar image is required");
