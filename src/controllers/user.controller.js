@@ -1,7 +1,10 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.models.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+  deleteFromCloudinary,
+  uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import jwt from "jsonwebtoken";
@@ -329,6 +332,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar image upload failed");
   }
 
+  const publicId = req.user.avatar.split("/").pop().split(".")[0];
+  // console.log(publicId);
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -340,6 +346,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
       new: true,
     }
   ).select("-password -refreshToken");
+
+  // delete old avatar from cloudinary
+  await deleteFromCloudinary(publicId);
 
   res
     .status(200)
@@ -376,6 +385,105 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Cover Image updated successfully"));
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username?.trim()) {
+    throw new ApiError(400, "Username is missing");
+  }
+
+  // imp note in ss
+  // (ツ C:\Users\ACER\Pictures\Screenshots\Screenshot (65).png ツ)
+
+  // mongodb aggregation pipelines are stages
+  // 1. match stage - filter the documents based on the condition
+  // 2. group stage - group the documents based on the condition
+  // 3. project stage - reshape the documents.. its like passing selected fields onto the next stage
+  // there are notes in ss..(66,67,68) refer to them
+
+  // User.find({username})
+  const channel = await User.aggregate([
+    {
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id", //matlab CAC
+        foreignField: "channel", //channel == CAC
+        as: "subscribers",
+      },
+      // bohot saare documents hai
+      // user a subscribes to CAC
+      // user b subscribes to CAC
+      // so new document generates where channel is CAC and subscriber is a
+      // to count no of subscribers, count documents where channel is CAC
+      // to count no of people user a is subscribed to, we can use $lookup again
+      // and count the documents where subscriber is a
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber", // subscriber == user a
+        as: "subscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: { $size: "$subscribers" },
+        ChannelsSubscribedToCount: { $size: "$subscribedTo" },
+        isSubscribed: {
+          // $in is used to check if the user is subscribed to the channel
+          // means if the user id is present in the subscribers array
+          // so here $subcribers is an array of objects
+          // each object has a subscriber field which is the user id of the subscriber
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        // jo chize pass on karni hai unka flag 1 kar do
+        // jo nahi chahiye unka flag 0 kar do
+        // its done to reduce network traffic
+        fullname: 1,
+        username: 1,
+        subscribersCount: 1,
+        ChannelsSubscribedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImg: 1,
+        email: 1,
+      },
+    },
+  ]);
+  // TODO look at console log
+
+  // what data type does aggregate return?
+  // it returns an array of objects
+
+  if (!channel?.length) {
+    throw new ApiError(404, "Channel does not exist");
+  }
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      channel[0], // since we are matching by username, there will be only one channel
+      "User channel fetched successfully"
+    )
+  );
+
+  console.log("User Channel Profile Data:", channel);
+});
+
 export {
   registerUser,
   loginUser,
@@ -386,4 +494,5 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
 };
