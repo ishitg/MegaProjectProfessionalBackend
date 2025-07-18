@@ -8,6 +8,7 @@ import {
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -409,6 +410,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
     {
+      // its like a join in sql
+      // left join
       $lookup: {
         from: "subscriptions",
         localField: "_id", //matlab CAC
@@ -472,6 +475,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
   if (!channel?.length) {
     throw new ApiError(404, "Channel does not exist");
   }
+  console.log("User Channel Profile Data:", channel);
 
   return res.status(200).json(
     new ApiResponse(
@@ -480,8 +484,88 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       "User channel fetched successfully"
     )
   );
+});
 
-  console.log("User Channel Profile Data:", channel);
+const getWatchHistory = asyncHandler(async (req, res) => {
+  // req.user._id
+  // what do you get?
+  // you get a string
+  // at mongo db it'll be stored as an ObjectId
+  // like ObjectId("64f8c8e8f8c8e8f8c8e8f8c")
+  // but since we are using mongoose, it will automatically convert the string to mongo db ObjectId
+  const user = await User.aggregate([
+    {
+      $match: {
+        // _id: req.user._id
+        // this won't work because here in aggregation pipelines, mongoose doesn't work and data goes directly to mongo db
+        // so we have to create the mongoose ObjectId from the string
+        _id: new mongoose.Types.ObjectId(req.user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos", // the collection name in mongo db
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        // we've to use a nested pipeline here because when we'll get the watchHistory, it will be an array of video ids
+        // and the owner field won't be populated
+        // because the owner field is an ObjectId and not a string
+        // so we've to use a sub-pipeline to populate the owner field
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              // TODO what'll happen if I take this nested pipeline below outside to the next stage?
+              // it won't work because the owner field will be an array of objects
+              // in a way it works but the structure of the data will be different
+              pipeline: [
+                {
+                  $project: {
+                    fullname: 1,
+                    username: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+            // {
+            //   // TODO what happens if I take that pipeline here?
+            // }
+          },
+          // since lookup will return an array of objects
+          // the owner field is indeed an array of objects
+          // owner[0] will have that data in project stage, so to make things easier for frontend
+          // so we'll try to change the structure of the data
+          {
+            $addFields: {
+              owner: {
+                $first: "$owner", // this will take the first element of the owner array
+                // so frontend will get the owner object directly
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!user?.length) {
+    throw new ApiError(404, "User not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "Watch history fetched successfully"
+      )
+    );
 });
 
 export {
@@ -495,4 +579,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory,
 };
