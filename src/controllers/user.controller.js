@@ -187,8 +187,11 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      // $set: {
+      //   refreshToken: undefined,
+      // },
+      $unset: {
+        refreshToken: 1,
       },
     },
     {
@@ -213,7 +216,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   // give me refersh token from cookies
   // then hit a route with this refersh token
   // then I'll generate a new access token for ya upon verification
-  const incomingRefreshToken = req.cookies.accessToken || req.body.refreshToken;
+  const incomingRefreshToken =
+    req.cookies.refreshToken || req.body.refreshToken;
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorised request");
   }
@@ -244,8 +248,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       throw new ApiError(401, "Refresh token expired or is invalid");
     }
 
-    const { accessToken, newRefreshToken } =
-      await generateAccessAndRefreshTokens(user._id);
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+      user._id
+    );
 
     const options = {
       httpOnly: true,
@@ -255,13 +260,13 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     res
       .status(200)
       .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", newRefreshToken, options)
+      .cookie("refreshToken", refreshToken, options)
       .json(
         new ApiResponse(
           200,
           {
             accessToken,
-            refreshToken: newRefreshToken,
+            refreshToken: refreshToken,
           },
           "Access token refreshed successfully"
         )
