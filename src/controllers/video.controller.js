@@ -172,7 +172,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         from: "likes",
         localField: "_id",
         foreignField: "video",
-        as: "likes",
+        as: "likeCount",
       },
     },
     {
@@ -220,11 +220,11 @@ const getVideoById = asyncHandler(async (req, res) => {
           $first: "$owner",
         },
         totalLikes: {
-          $size: "$likes",
+          $size: "$likeCount",
         },
         isLiked: {
           $cond: {
-            if: { $in: [req.user?._id, $likes.likedBy] },
+            if: { $in: [req.user?._id, $likeCount.likedBy] },
             then: true,
             else: false,
           },
