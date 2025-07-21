@@ -166,6 +166,10 @@ const deleteTweet = asyncHandler(async (req, res) => {
     throw new ApiError(500, "There was an error while deleting the tweet!");
   }
 
+  await Like.deleteMany({
+    tweet: tweetId,
+  });
+
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Tweet deleted successfully!"));
