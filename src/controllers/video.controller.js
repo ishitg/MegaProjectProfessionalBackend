@@ -1,6 +1,7 @@
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.models.js";
 import { User } from "../models/user.models.js";
+import { Comment } from "../models/comment.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -128,7 +129,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Thumbnail upload failed!");
   }
 
-  const { duration } = video;
+  const { duration } = videoFile;
 
   const video = await Video.create({
     videoFile: videoFile.url,
@@ -137,7 +138,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
     description,
     duration,
     owner: req.user?._id,
-    isPublished,
   });
 
   const createdVideo = await Video.findById(video._id);
@@ -173,6 +173,17 @@ const getVideoById = asyncHandler(async (req, res) => {
         localField: "_id",
         foreignField: "video",
         as: "likeCount",
+      },
+    },
+    {
+      $addFields: {
+        isLiked: {
+          $cond: {
+            if: { $in: [req.user?._id, "$likeCount.likedBy"] },
+            then: true,
+            else: false,
+          },
+        },
       },
     },
     {
@@ -222,13 +233,6 @@ const getVideoById = asyncHandler(async (req, res) => {
         totalLikes: {
           $size: "$likeCount",
         },
-        isLiked: {
-          $cond: {
-            if: { $in: [req.user?._id, $likeCount.likedBy] },
-            then: true,
-            else: false,
-          },
-        },
       },
     },
     {
@@ -270,6 +274,10 @@ const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   //TODO: update video details like title, description, thumbnail
   const { title, description } = req.body;
+  const thumbnailLocalPath = req.file?.path;
+
+  console.log(title, description, thumbnailLocalPath);
+  console.log(req.file);
 
   if (!title || !description || !thumbnailLocalPath) {
     throw new ApiError(400, "All fields are required!");
@@ -285,7 +293,7 @@ const updateVideo = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You are not authorized to update this video!");
   }
 
-  const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
+  // const thumbnailLocalPath = req.files?.thumbnail[0]?.path;
   const thumbnailPublicId = video.thumbnail.split("/").pop().split(".")[0];
 
   const thumbnail = await uploadOnCloudinary(thumbnailLocalPath);
@@ -328,7 +336,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Video not found!");
   }
 
-  if (video?.owner.toString() !== req.user?._id) {
+  if (video?.owner.toString() !== req.user?._id.toString()) {
     throw new ApiError(403, "You are not authorized to delete this video!");
   }
 
@@ -364,7 +372,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Video not found!");
   }
 
-  if (video?.owner.toString() !== req.user?._id.toString) {
+  if (video?.owner.toString() !== req.user?._id.toString()) {
     throw new ApiError(403, "You are not authorized to toggle publish status!");
   }
 
@@ -388,7 +396,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     new ApiResponse(
       200,
       {
-        isPublished: updatedVideo,
+        isPublished: updatedVideo.isPublished,
       },
       "Video publish status toggled successfully!"
     )

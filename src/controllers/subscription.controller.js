@@ -51,17 +51,15 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
 
-  const channel = await User.findOne({
-    _id: channelId,
-  });
+  const channel = await User.findById(channelId);
 
   if (!channel) {
     throw new ApiError(404, "Channel not found");
   }
 
-  if (channel?._id.toString() !== req.user?._id.toString()) {
-    throw new ApiError(400, "Only channel owner can view subscribers");
-  }
+  // if (channel?._id.toString() !== req.user?._id.toString()) {
+  //   throw new ApiError(400, "Only channel owner can view subscribers");
+  // }
 
   const subscribers = await Subscription.aggregate([
     {
@@ -146,12 +144,12 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 
 // controller to return channel list to which user has subscribed
 const getSubscribedChannels = asyncHandler(async (req, res) => {
-  const { subscriberId } = req.params;
+  const { channelId } = req.params;
 
   const channels = await Subscription.aggregate([
     {
       $match: {
-        subscriber: new mongoose.Types.ObjectId(subscriberId),
+        subscriber: new mongoose.Types.ObjectId(channelId),
       },
     },
     {
@@ -183,6 +181,18 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
             },
           },
         ],
+      },
+    },
+    {
+      $addFields: {
+        channelDetails: {
+          $first: "$channelDetails",
+        },
+      },
+    },
+    {
+      $project: {
+        channelDetails: 1,
       },
     },
   ]);

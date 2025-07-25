@@ -3,7 +3,7 @@ import { Playlist } from "../models/playlist.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-
+import { Video } from "../models/video.models.js";
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
@@ -24,7 +24,7 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, "Playlist created", newPlaylist));
+    .json(new ApiResponse(200, newPlaylist, "Playlist created"));
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
@@ -85,11 +85,11 @@ const getPlaylistById = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   //TODO: get playlist by id
 
-  const list = await Playlist.findById(playlistId);
+  // const list = await Playlist.findById(playlistId);
 
-  if (!list) {
-    throw new ApiError(404, "Playlist not found");
-  }
+  // if (!list) {
+  //   throw new ApiError(404, "Playlist not found");
+  // }
 
   const playlist = await Playlist.aggregate([
     {
@@ -104,6 +104,11 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         foreignField: "_id",
         as: "playlistVideos",
         pipeline: [
+          {
+            $match: {
+              isPublished: true,
+            },
+          },
           {
             $lookup: {
               from: "users",
@@ -129,11 +134,6 @@ const getPlaylistById = asyncHandler(async (req, res) => {
             },
           },
         ],
-      },
-    },
-    {
-      $match: {
-        "playlistVideos.isPublished": true,
       },
     },
     {
@@ -219,8 +219,17 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     );
   }
 
-  const newPlaylist = playlist.videos.push(videoId);
-  await playlist.save({ validateBeforeSave: false });
+  const newPlaylist = await Playlist.findByIdAndUpdate(
+    playlist?._id,
+    {
+      $addToSet: {
+        videos: videoId,
+      },
+    },
+    {
+      new: true,
+    }
+  );
 
   if (!newPlaylist) {
     throw new ApiError(500, "Error while adding video to playlist");
@@ -255,6 +264,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   }
 
   const newPlaylist = await Playlist.findByIdAndUpdate(
+    playlist?._id,
     {
       $pull: {
         videos: videoId,

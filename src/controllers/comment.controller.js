@@ -3,7 +3,7 @@ import { Comment } from "../models/comment.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-
+import { Like } from "../models/like.models.js";
 const getVideoComments = asyncHandler(async (req, res) => {
   //TODO: get all comments for a video
   const { videoId } = req.params;
@@ -14,7 +14,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
     limit: parseInt(limit, 10),
   };
 
-  const commentAggregate = await Comment.aggregate([
+  const pipeline = [
     {
       $match: {
         video: new mongoose.Types.ObjectId(videoId),
@@ -71,9 +71,9 @@ const getVideoComments = asyncHandler(async (req, res) => {
         isLiked: 1,
       },
     },
-  ]);
+  ];
 
-  const comments = await Comment.aggregatePaginate(commentAggregate, options);
+  const comments = await Comment.aggregatePaginate(pipeline, options);
 
   return res
     .status(200)
