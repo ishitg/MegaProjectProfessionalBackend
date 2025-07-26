@@ -1,8 +1,8 @@
-# MegaProjectProfessionalBackend
+# Youtube Clone Backend
 
 ## Overview
 
-MegaProjectProfessionalBackend is an **advanced backend project for a video hosting platform**, designed to follow industry standards and production-level practices. Inspired by platforms like YouTube, it provides all the foundational backend infrastructure needed to support a modern, feature-rich video streaming service.
+This is an **advanced backend project for a video hosting platform**, designed to follow industry standards and production-level practices. Inspired by platforms like YouTube, it provides all the foundational backend infrastructure needed to support a modern, feature-rich video streaming service.
 
 This project implements a well-structured and scalable codebase, emphasizing modular design, clean separation of concerns, and robust security throughout.
 
@@ -72,8 +72,8 @@ This project implements a well-structured and scalable codebase, emphasizing mod
 
 1. **Clone the repository**
    ```
-   git clone https://github.com/ishitg/MegaProjectProfessionalBackend.git
-   cd MegaProjectProfessionalBackend
+   git clone https://github.com/ishitg/youtube-clone-backend.git
+   cd youtube-clone-backend
    ```
 2. **Install dependencies**
    ```
