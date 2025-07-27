@@ -10,6 +10,8 @@ This project implements a well-structured and scalable codebase, emphasizing mod
 
 ## Key Features
 
+### [Data Model Diagram](https://app.eraser.io/workspace/PhYmYyQ5UDcmRm3cSB4R?origin=share)
+
 ### User Management:
  - Registration, authentication (JWT), profile management (avatar, cover Image, channel details) , watch history
 
