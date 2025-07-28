@@ -90,4 +90,4 @@ This project implements a well-structured and scalable codebase, emphasizing mod
    ```
 
 5. **Explore API Endpoints**
-   - Use Postman
+   - Use Postman Collection [here](https://www.postman.com/ishitg/youtube-deploy/collection/xxgqk55/youtubebackend?action=share&creator=32903583&active-environment=32903583-37cd3050-35f7-4097-a5f8-492e957f1b52)
